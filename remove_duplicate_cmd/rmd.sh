@@ -90,8 +90,8 @@ for (( i=0 ; i<"$I" ; i++ )); do # Pour tous les hash différents
             echo "Un lien symbolique de ${NameRef[0]} sera établit vers ${NameRef[*]:1}"
         else
             for k in ${NameRef[*]:1}; do
-                echo "rm --> $k"
-                echo "symlink from ${NameRef[0]} to $k"
+                echo "rm -> $k"
+                echo "ln -rs -> ${NameRef[0]} -> $k"
             done
         fi
 

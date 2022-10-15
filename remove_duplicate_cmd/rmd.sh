@@ -11,11 +11,12 @@ usage() {
     echo -e "Type:\n   -h for help\n   -R for recursive mode\n"
 }
 
+
 [[ $# -lt 1 ]] && err 'Missing arguments, type -h' && exit 1
 
 
 ### Gestion des paramètres
-options=$(getopt -o hR -l help -- "$@")
+options=$(getopt -o hRqd -l help -- "$@")
 
 eval set -- "$options" # eval for remove simple quote
 
@@ -25,6 +26,10 @@ while true; do
             shift;;
         -h|--help) usage
             exit 0
+            shift;;
+        -q) exec &>/dev/null
+            shift;;
+        -d) dryrun=true
             shift;;
         --)
             shift
@@ -57,17 +62,41 @@ done <<< "$(echo "$sha" | awk '{ print $1 }' | sort -u)"
 J=$(($# * 2))
 I=${#array_hash_uniq[*]}
 
+
 ### Algorithme
-for (( i=0 ; i<"$I" ; i++ )); do
+for (( i=0 ; i<"$I" ; i++ )); do # Pour tous les hash différents
     tab_result="tab_$i"
     declare -n NameRef="$tab_result"
     loop=0
+    volume=0
 
-    for (( j=0 ; j<"$J" ; j+=2 )); do
+    for (( j=0 ; j<"$J" ; j+=2 )); do # Pour tous les hashs
         if [ "${array_hash_uniq[$i]}" = "${array_hash_file[$j]}" ]; then
-            NameRef[$loop]+=$(basename "${array_hash_file[(( $j + 1 ))]}")
+            NameRef[$loop]+=${array_hash_file[(( $j + 1 ))]}
             (( loop++ ))
         fi
     done
-    echo "${NameRef[*]}"
+    echo "Fichiers identiques : ${NameRef[*]}"
+
+    if [ ${#NameRef[*]} -gt 1 ]; then # Si fichiers identiques
+
+        while read -r line; do 
+            (( volume+=$line ))
+            (( total_volume+=$line ))
+        done <<< "$(stat -c "%s" ${NameRef[*]:1})"
+
+        if [ $dryrun ]; then
+            echo "Les fichiers suivants vont être supprimés : ${NameRef[*]:1}"
+            echo "Un lien symbolique de ${NameRef[0]} sera établit vers ${NameRef[*]:1}"
+        else
+            for k in ${NameRef[*]:1}; do
+                echo "rm --> $k"
+                echo "symlink from ${NameRef[0]} to $k"
+            done
+        fi
+
+        echo -e "Volumétrie totale des doublons : $volume\n"
+    fi
 done
+
+echo -e "\nVolume total libéré : ${total_volume}o"

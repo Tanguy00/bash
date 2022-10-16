@@ -7,37 +7,59 @@ err() {
 }
 
 usage() {
-    echo -e "\nUse: ./$(basename "$0") file1 [file2] [file3] ... [filen]\n"
-    echo -e "Type:\n   -h for help\n   -R for recursive mode\n"
+    echo -e "\nUse: ./$(basename "$0") file1 [file2] [file3] ... [filen]
+               [-h] [-R] [-d] [-a dest_file] [-f {z | g | b | x}]\n"
+    echo -e "Type:
+    -h for help
+    -R for recursive mode
+    -d for dry-run mode
+    -a for compress files before delete
+    -f for using specific compression software (gzip default)\n"
 }
 
-
-[[ $# -lt 1 ]] && err 'Missing arguments, type -h' && exit 1
+bB='\e[94m\e[1m'
+gB='\e[92m\e[1m'
+n='\e[0m'
 
 
 ### Gestion des paramètres
-options=$(getopt -o hRqd -l help -- "$@")
+options=$(getopt -o hRqda:f: -l help -- "$@")
 
 eval set -- "$options" # eval for remove simple quote
 
 while true; do
-    case "$1" in 
-        -R) recursive=true
-            shift;;
+    case "$1" in
         -h|--help) usage
             exit 0
             shift;;
         -q) exec &>/dev/null
             shift;;
+        -R) recursive=true
+            shift;;
         -d) dryrun=true
             shift;;
-        --)
-            shift
+        -a) archive="$2"
+            shift 2;;
+        -f) case "$2" in
+                z)  compression='zip'
+                    shift 2;;
+                g)  compression='gzip'
+                    shift 2;;
+                b)  compression='bzip2'
+                    shift 2;;
+                x)  compression='xz'
+                    shift 2;;
+                *)  err 'Bad arguments for -f, type -h' && exit 1
+                    ;;
+            esac;;
+        --) shift
             break;;
-        *) usage;
+        *)  err "Internal error"; exit 1
             shift;;
     esac 
 done
+
+[[ $# -lt 1 ]] && err 'Missing arguments, type -h' && exit 1
 
 
 ### Création des variables
@@ -76,7 +98,12 @@ for (( i=0 ; i<"$I" ; i++ )); do # Pour tous les hash différents
             (( loop++ ))
         fi
     done
-    echo "Fichiers identiques : ${NameRef[*]}"
+
+    if [ ${#NameRef[*]} -lt 2 ]; then
+        echo -e "${bB}Fichiers unique :${n} ${NameRef[*]}"
+    else
+        echo -e "${bB}Fichiers identiques :${n} ${NameRef[*]}"
+    fi
 
     if [ ${#NameRef[*]} -gt 1 ]; then # Si fichiers identiques
 
@@ -88,15 +115,35 @@ for (( i=0 ; i<"$I" ; i++ )); do # Pour tous les hash différents
         if [ $dryrun ]; then
             echo "Les fichiers suivants vont être supprimés : ${NameRef[*]:1}"
             echo "Un lien symbolique de ${NameRef[0]} sera établit vers ${NameRef[*]:1}"
+            [ -v $archive ] || echo "Ajout des fichiers ${NameRef[*]:1} dans une archive nommée ${archive}.tar"
         else
+            [ -v $archive ] || echo "tar rf : ${archive}.tar -> ${NameRef[*]:1}"
+
             for k in ${NameRef[*]:1}; do
                 echo "rm -> $k"
-                echo "ln -rs -> ${NameRef[0]} -> $k"
+                echo "ln -rs : ${NameRef[0]} -> $k"
             done
+
         fi
 
         echo -e "Volumétrie totale des doublons : $volume\n"
     fi
 done
 
-echo -e "\nVolume total libéré : ${total_volume}o"
+echo -e "${gB}"
+if ! [ -v $archive ]; then
+    case ${compression:-gzip} in
+        zip) [ $dryrun ] && echo "Compression de ${archive}.tar avec zip" || zip ${archive}.tar
+            ;;
+        gzip) [ $dryrun ] && echo "Compression de ${archive}.tar avec gzip" || gzip ${archive}.tar 
+            ;;
+        bzip2) [ $dryrun ] && echo "Compression de ${archive}.tar avec bzip2" || bzip2 ${archive}.tar
+            ;;
+        xz) [ $dryrun ] && echo "Compression de ${archive}.tar avec xz" || xz ${archive}.tar
+            ;;
+        *) err "Internal error"; exit 1
+            ;;
+    esac
+fi
+
+echo -e "Volume total libéré : ${total_volume}o (volume de l'archive non déduit si option -a)\n"

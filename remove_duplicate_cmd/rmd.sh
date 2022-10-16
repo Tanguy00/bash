@@ -19,6 +19,7 @@ usage() {
 
 bB='\e[94m\e[1m'
 gB='\e[92m\e[1m'
+r='\e[31m'
 n='\e[0m'
 
 
@@ -100,7 +101,7 @@ for (( i=0 ; i<"$I" ; i++ )); do # Pour tous les hash différents
     done
 
     if [ ${#NameRef[*]} -lt 2 ]; then
-        echo -e "${bB}Fichiers unique :${n} ${NameRef[*]}"
+        echo -e "${bB}Fichier unique :${n} ${NameRef[*]}"
     else
         echo -e "${bB}Fichiers identiques :${n} ${NameRef[*]}"
     fi
@@ -117,11 +118,11 @@ for (( i=0 ; i<"$I" ; i++ )); do # Pour tous les hash différents
             echo "Un lien symbolique de ${NameRef[0]} sera établit vers ${NameRef[*]:1}"
             [ -v $archive ] || echo "Ajout des fichiers ${NameRef[*]:1} dans une archive nommée ${archive}.tar"
         else
-            [ -v $archive ] || echo "tar rf : ${archive}.tar -> ${NameRef[*]:1}"
+            [ -v $archive ] || echo -e "${r}tar rf${n} : ${archive}.tar -> ${NameRef[*]:1}"
 
             for k in ${NameRef[*]:1}; do
-                echo "rm -> $k"
-                echo "ln -rs : ${NameRef[0]} -> $k"
+                echo -e "${r}rm -f${n} -> $k"
+                echo -e "${r}ln -rs${n} : ${NameRef[0]} -> $k"
             done
 
         fi

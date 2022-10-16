@@ -11,8 +11,6 @@ usage() {
     echo -e "Type:\n   -h for help\n   -R for recursive mode\n"
 }
 
-[[ $# -lt 1 ]] && err 'Missing arguments, type -h' && exit 1
-
 
 ### Gestion des paramètres
 options=$(getopt -o hR -l help -- "$@")
@@ -33,6 +31,8 @@ while true; do
             shift;;
     esac 
 done
+
+[[ $# -lt 1 ]] && err 'Missing arguments, type -h' && exit 1
 
 
 ### Création des variables
